@@ -1,1 +1,1 @@
-python -m unittest tests/test_storage.py -v
+python -m unittest discover tests -v
