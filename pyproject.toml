@@ -1,0 +1,10 @@
+[project]
+name = "tsutodo"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "click>=8.4.2",
+    "rich>=15.0.0",
+]
