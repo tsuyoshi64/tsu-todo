@@ -25,7 +25,7 @@ def save_tasks(tasks: list, file_path="tasks.json") -> None:
     """
     Saves task data back to json file safety (I hope so).
 
-    I'm usng atomic-write pattern (temp & os.replace) to prevent torn writes.
+    I'm using atomic-write pattern (temp & os.replace) to prevent torn writes.
     Does not validate task shapes or meanings, only acts as a byte/file manager.
     """
     tmp_path: str = f"{file_path}.tmp"
