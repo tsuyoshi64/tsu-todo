@@ -90,6 +90,7 @@ def add(title: str, deadline: str | None, important: bool) -> None:
 @cli.command("done")
 @click.argument("task_id", type=int)
 def done(task_id: int) -> None:
+    """Marks a targeted task as completed and automatically deletes it from storage."""
     try:
         task_list = tasks.load_task_objects()
     except Exception as e:
