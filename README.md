@@ -1,3 +1,4 @@
+
 # tsu-todo
 
 `tsu-todo` is a small command-line to-do manager for tracking tasks from the terminal. It supports adding tasks, marking tasks as complete, deadlines, important flags, and a Rich-powered table view.
@@ -11,16 +12,16 @@
 - List open tasks in a formatted terminal table.
 - Automatically marks past deadlines as overdue.
 - Complete a task by ID and remove it from the active list.
-- Stores task data locally in `tasks.json`.
+- Stores task data locally in a permanent, centralized `tasks.json` directory.
 
 ## Requirements
 
-- Python `3.12` or newer
+- Python `3.10` or newer
 - [`uv`](https://docs.astral.sh/uv/) for dependency management and command execution
 
 ## Dependencies
 
-Runtime dependencies are defined in `pyproject.toml`, but this porject only uses two dependencies:
+Runtime dependencies are defined in `pyproject.toml`, but this project only uses two dependencies:
 
 - `click` - CLI commands and argument parsing
 - `rich` - formatted terminal output
@@ -44,7 +45,7 @@ uv tool install git+https://github.com/tsuyoshi64/tsu-todo.git --upgrade
 Verify the CLI is available:
 
 ```bash
-todo --help
+todo
 ```
 
 ## Usage
@@ -91,14 +92,20 @@ Completed tasks are removed from the active task list.
 
 ## Data Storage
 
-Tasks are saved to a local `tasks.json` file in the directory where the CLI is run. 
+To protect your todo items from being accidentally deleted during application updates or uninstalls, `tsu-todo` avoids using relative execution paths. Instead, your tasks are securely anchored inside your operating system's permanent local data directory:
+
+- **Linux / WSL:** `~/.local/share/tsutodo/tasks.json`
+- **macOS:** `~/Library/Application Support/tsutodo/tasks.json`
+- **Windows:** `%LOCALAPPDATA%\tsutodo\tasks.json`
+
+This centralized design ensures you can view and update the exact same task list regardless of which directory your terminal is currently sitting in.
 
 ## Development
 
 Run the test suite:
 
 ```bash
-uv run python -m unittest discover tests -v
+python -m unittest discover -s tests -p "test_*.py" -v
 ```
 
 Or use the included shell script:
