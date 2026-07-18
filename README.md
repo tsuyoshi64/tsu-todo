@@ -2,9 +2,8 @@
 
 `tsutodo` is a small command-line to-do manager for tracking tasks from the terminal. It supports adding tasks, marking tasks as complete, deadlines, important flags, and a Rich-powered table view.
 
-## Notes
-
-This project is under active development. The current command set is intentionally small: add, list, and complete tasks.
+> [!IMPORTANT]
+> This project is under active development. The current command set is intentionally small.
 
 ## Features
 
@@ -16,12 +15,12 @@ This project is under active development. The current command set is intentional
 
 ## Requirements
 
-- Python `3.14` or newer
+- Python `3.12` or newer
 - [`uv`](https://docs.astral.sh/uv/) for dependency management and command execution
 
 ## Dependencies
 
-Runtime dependencies are defined in `pyproject.toml`:
+Runtime dependencies are defined in `pyproject.toml`, but this porject only uses two dependencies:
 
 - `click` - CLI commands and argument parsing
 - `rich` - formatted terminal output
