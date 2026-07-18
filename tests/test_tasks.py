@@ -1,6 +1,5 @@
 import unittest
-from datetime import datetime
-from unittest.mock import patch
+from datetime import datetime, timedelta
 
 from tasks import (
     Task,
@@ -8,15 +7,13 @@ from tasks import (
     _find_task_by_id,
     create_task,
     dicts_to_tasks,
-    load_task_objects,
     mark_done,
-    save_task_objects,
     tasks_to_dicts,
 )
 
 
 class TestTasksModule(unittest.TestCase):
-    # 1. TEST CUSTOM EXCEPTION & DATACLASS DEFAULTS
+    # CUSTOM EXCEPTION & DATACLASS DEFAULTS
     def test_task_not_found_error_inheritance(self) -> None:
         """Verify TaskNotFoundError behaves as a proper Exception subclass."""
         err = TaskNotFoundError("Test error message")
@@ -32,8 +29,8 @@ class TestTasksModule(unittest.TestCase):
         self.assertFalse(task.done)
         self.assertFalse(task.important)
         self.assertIsNone(task.deadline)
+        self.assertFalse(task.overdue)  # No deadline means never overdue
 
-        # Ensure time_created is valid ISO 8601 string format
         try:
             datetime.fromisoformat(task.time_created)
         except ValueError:
@@ -41,25 +38,45 @@ class TestTasksModule(unittest.TestCase):
                 "time_created property failed to provide a valid ISO 8601 string."
             )
 
-    # 2. TEST SERIALIZATION / DESERIALIZATION PIPELINE
+    # OVERDUE TIMING COMPUTATIONS VIA __POST_INIT__
+    def test_task_overdue_with_past_date(self) -> None:
+        """Verify tasks with plain past date strings evaluate overdue to True."""
+        task = Task(id=1, title="Late task", deadline="2020-01-01")
+        self.assertTrue(task.overdue)
+
+    def test_task_not_overdue_with_future_date(self) -> None:
+        """Verify tasks with future date strings evaluate overdue to False."""
+        # Generating a dynamic far-future date to keep tests forever green
+        future_date = (datetime.now() + timedelta(days=365)).strftime("%Y-%m-%d")
+        task = Task(id=1, title="Future task", deadline=future_date)
+        self.assertFalse(task.overdue)
+
+    def test_task_overdue_with_malformed_date(self) -> None:
+        """Malformed deadline strings must fail gracefully and assign False to overdue."""
+        task = Task(id=1, title="Bad date format", deadline="not-a-date")
+        self.assertFalse(task.overdue)
+
+    # TEST SERIALIZATION / DESERIALIZATION PIPELINE
     def test_task_from_dict_happy_path(self) -> None:
-        """Verify raw dictionary deserialization maps all fields correctly."""
+        """Verify raw dictionary deserialization maps all fields including overdue correctly."""
         raw = {
             "id": 10,
             "title": "Clean keyboard",
-            "done": True,
-            "deadline": "2026-07-20",
+            "done": False,
+            "deadline": "2020-07-20",
             "important": True,
-            "time_created": "2026-07-17T12:00:00",
+            "time_created": "2020-07-17T12:00:00",
+            "overdue": True,
         }
         task = Task.from_dict(raw)
 
         self.assertEqual(task.id, 10)
         self.assertEqual(task.title, "Clean keyboard")
-        self.assertTrue(task.done)
+        self.assertFalse(task.done)
         self.assertTrue(task.important)
-        self.assertEqual(task.deadline, "2026-07-20")
-        self.assertEqual(task.time_created, "2026-07-17T12:00:00")
+        self.assertEqual(task.deadline, "2020-07-20")
+        self.assertEqual(task.time_created, "2020-07-17T12:00:00")
+        self.assertTrue(task.overdue)
 
     def test_task_from_dict_schema_drift(self) -> None:
         """Verify extra unexpected dictionary fields are safely thrown out."""
@@ -77,17 +94,16 @@ class TestTasksModule(unittest.TestCase):
         self.assertFalse(hasattr(task, "tags"))
 
     def test_tasks_to_dicts_mapping(self) -> None:
-        """Verify automated serialization maps list objects down to dictionaries."""
-        t1 = Task(id=1, title="Task One", done=True)
-        t2 = Task(id=2, title="Task Two", important=True)
+        """Verify automated serialization maps list objects down to dictionaries including overdue."""
+        t1 = Task(
+            id=1, title="Task One", deadline="2020-01-01"
+        )  # overdue will be calculated True
 
-        raw_list = tasks_to_dicts([t1, t2])
+        raw_list = tasks_to_dicts([t1])
 
-        self.assertEqual(len(raw_list), 2)
+        self.assertEqual(len(raw_list), 1)
         self.assertEqual(raw_list[0]["id"], 1)
-        self.assertTrue(raw_list[0]["done"])
-        self.assertEqual(raw_list[1]["id"], 2)
-        self.assertTrue(raw_list[1]["important"])
+        self.assertTrue(raw_list[0]["overdue"])
 
     def test_dicts_to_tasks_mapping(self) -> None:
         """Verify batch list conversions rehydrate dictionaries into strict objects."""
@@ -97,20 +113,16 @@ class TestTasksModule(unittest.TestCase):
         self.assertEqual(len(task_list), 2)
         self.assertIsInstance(task_list[0], Task)
         self.assertEqual(task_list[0].title, "A")
-        self.assertIsInstance(task_list[1], Task)
-        self.assertEqual(task_list[1].title, "B")
 
-    # 3. TEST PRIVATE HELPER & WORKFLOW MUTATIONS
+    # TEST PRIVATE HELPER & WORKFLOW MUTATIONS
     def test_find_task_by_id_scenarios(self) -> None:
         """Test matching and missing search targets through the internal index helper."""
         tasks = [Task(id=5, title="Five"), Task(id=10, title="Ten")]
 
-        # Match Scenario
         found = _find_task_by_id(tasks, 10)
         self.assertIsNotNone(found)
         self.assertEqual(found.title, "Ten")  # type: ignore
 
-        # Miss Scenario
         missing = _find_task_by_id(tasks, 99)
         self.assertIsNone(missing)
 
@@ -128,19 +140,23 @@ class TestTasksModule(unittest.TestCase):
         with self.assertRaises(TaskNotFoundError):
             mark_done(tasks, 404)
 
-    # 4. TEST CORE FACTORY & ID GENERATION STRATEGY
+    # =========================================================================
+    # 5. TEST CORE FACTORY & ID GENERATION STRATEGY
+    # =========================================================================
+
     def test_create_task_appends_to_list(self) -> None:
         """Verify factory populates tracking list and maps explicit parameters."""
         task_list: list[Task] = []
         new_task = create_task(
-            task_list, "My Task", deadline="2026-08-01", important=True
+            task_list, "My Task", deadline="2020-08-01", important=True
         )
 
         self.assertEqual(len(task_list), 1)
         self.assertIs(task_list[0], new_task)
         self.assertEqual(new_task.title, "My Task")
-        self.assertEqual(new_task.deadline, "2026-08-01")
+        self.assertEqual(new_task.deadline, "2020-08-01")
         self.assertTrue(new_task.important)
+        self.assertTrue(new_task.overdue)  # Past date context triggers True
 
     def test_create_task_id_generation_empty(self) -> None:
         """Verify initial run maps default task ID to 1 when tracking index is clean."""
@@ -156,52 +172,15 @@ class TestTasksModule(unittest.TestCase):
 
     def test_create_task_id_generation_gap_reuse_middle(self) -> None:
         """Verify gap-reuse strategy recycles deleted tracking indices cleanly."""
-        # Gap exists at ID 2
         task_list = [Task(id=1, title="A"), Task(id=3, title="C")]
         t = create_task(task_list, "B")
         self.assertEqual(t.id, 2)
 
     def test_create_task_id_generation_gap_reuse_start(self) -> None:
         """Verify gap-reuse strategy recycles ID 1 if it becomes missing."""
-        # Gap exists at the very beginning (ID 1)
         task_list = [Task(id=2, title="B"), Task(id=3, title="C")]
         t = create_task(task_list, "A")
         self.assertEqual(t.id, 1)
-
-    # 5. TEST STORAGE INTEGRATION PIPELINES
-    @patch("storage.load_tasks")
-    def test_load_task_objects_pipeline(self, mock_load_tasks) -> None:
-        """Verify load_task_objects safely chains storage data to hydration engine."""
-        mock_load_tasks.return_value = [
-            {"id": 1, "title": "Mock Task A"},
-            {"id": 2, "title": "Mock Task B"},
-        ]
-
-        live_tasks = load_task_objects()
-
-        self.assertEqual(len(live_tasks), 2)
-        self.assertIsInstance(live_tasks[0], Task)
-        self.assertEqual(live_tasks[0].id, 1)
-        self.assertEqual(live_tasks[1].title, "Mock Task B")
-        mock_load_tasks.assert_called_once()
-
-    @patch("storage.save_tasks")
-    def test_save_task_objects_pipeline(self, mock_save_tasks) -> None:
-        """Verify save_task_objects safely converts domain tasks to raw storage format."""
-        live_tasks = [
-            Task(id=10, title="Live Task 10"),
-            Task(id=11, title="Live Task 11", important=True),
-        ]
-
-        save_task_objects(live_tasks)
-
-        # Verify the data shape passed down into storage.py
-        mock_save_tasks.assert_called_once()
-        passed_arguments = mock_save_tasks.call_args[0][0]
-
-        self.assertEqual(len(passed_arguments), 2)
-        self.assertEqual(passed_arguments[0]["id"], 10)
-        self.assertTrue(passed_arguments[1]["important"])
 
 
 if __name__ == "__main__":

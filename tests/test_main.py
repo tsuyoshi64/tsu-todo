@@ -3,7 +3,6 @@ from unittest.mock import patch
 
 from click.testing import CliRunner
 
-# Import the main CLI and custom domain exceptions
 from main import cli
 from tasks import Task, TaskNotFoundError
 
@@ -13,7 +12,7 @@ class TestMainCLI(unittest.TestCase):
         """Initialize the Click execution runner framework."""
         self.runner = CliRunner()
 
-    # 1. LIST
+    # LIST
     @patch("main.tasks.load_task_objects")
     def test_list_command_empty_state(self, mock_load) -> None:
         """Verify the system handles empty collections with a friendly status warning."""
@@ -27,22 +26,28 @@ class TestMainCLI(unittest.TestCase):
 
     @patch("main.tasks.load_task_objects")
     def test_list_command_with_records(self, mock_load) -> None:
-        """Verify list command draws a structured matrix showing all record properties."""
+        """Verify list command draws a structured matrix showing Overdue tracking columns."""
         mock_load.return_value = [
             Task(
-                id=1, title="Task A", done=False, deadline="2026-12-01", important=True
-            ),
-            Task(id=2, title="Task B", done=True, deadline=None, important=False),
+                id=1, title="Task A", done=False, deadline="2020-12-01", important=True
+            ),  # Overdue is True
+            Task(
+                id=2, title="Task B", done=False, deadline=None, important=False
+            ),  # Overdue is False
         ]
 
         result = self.runner.invoke(cli, ["list"])
 
         self.assertEqual(result.exit_code, 0)
-        # Check table structural presence columns disregarding formatting tags
+        # Check column structural presences
         self.assertIn("ID", result.output)
         self.assertIn("Title", result.output)
+        self.assertIn("Overdue", result.output)  # New checking verification anchor
+        self.assertNotIn("Done", result.output)  # Confirms done column removal
+
+        # Check data rendering indicators
         self.assertIn("Task A", result.output)
-        self.assertIn("2026-12-01", result.output)
+        self.assertIn("OVERDUE", result.output)
         self.assertIn("Task B", result.output)
 
     @patch("main.tasks.load_task_objects")
@@ -55,7 +60,7 @@ class TestMainCLI(unittest.TestCase):
         self.assertEqual(result.exit_code, 0)
         self.assertIn("Storage Error:", result.output)
 
-    # 2. ADD
+    # ADD
     @patch("main.tasks.save_task_objects")
     @patch("main.tasks.create_task")
     @patch("main.tasks.load_task_objects")
@@ -67,7 +72,6 @@ class TestMainCLI(unittest.TestCase):
         result = self.runner.invoke(cli, ["add", "Mow Lawn"])
 
         self.assertEqual(result.exit_code, 0)
-        # Assert structural text match while stripping/ignoring style sequences
         self.assertIn("Added task", result.output)
         self.assertIn("1", result.output)
         self.assertIn("Mow Lawn", result.output)
@@ -99,7 +103,7 @@ class TestMainCLI(unittest.TestCase):
             tasks=[], title="Submit Paper", deadline="2026-05-01", important=True
         )
 
-    # 3. DONE
+    # DONE
     @patch("main.tasks.save_task_objects")
     @patch("main.tasks.mark_done")
     @patch("main.tasks.load_task_objects")
@@ -107,7 +111,6 @@ class TestMainCLI(unittest.TestCase):
         self, mock_load, mock_mark, mock_save
     ) -> None:
         """Verify successful completions match, mutate, remove from list, and save."""
-        # Create a real list so the .remove() operation doesn't crash on a mock
         target_task = Task(id=3, title="Fix plumbing")
         mock_list = [target_task]
         mock_load.return_value = mock_list
@@ -119,7 +122,6 @@ class TestMainCLI(unittest.TestCase):
         self.assertIn("3", result.output)
 
         mock_mark.assert_called_once_with(mock_list, 3)
-        # Verify it saves an empty array because the single item was dropped cleanly
         mock_save.assert_called_once_with([])
 
     @patch("main.tasks.save_task_objects")

@@ -1,3 +1,6 @@
+import warnings
+from turtle import title
+
 import click
 from rich.console import Console
 from rich.table import Table
@@ -30,20 +33,26 @@ def list_tasks() -> None:
     table = Table(title="Your To-Do List", title_style="bold cyan")
     table.add_column("ID", justify="right", style="dim", no_wrap=True)
     table.add_column("Title", style="white")
-    table.add_column("Done", justify="center")
     table.add_column("Deadline", justify="center", style="magenta")
+    table.add_column("Overdue", justify="center")
     table.add_column("Important", justify="center")
 
     # Hydrate rows applying visual conditional status iconography rules
     for task in task_list:
-        status_icon = "[green]✓[/green]" if task.done else "[red]✗[/red]"
         importance_icon = (
             "[bold yellow]★[/bold yellow]" if task.important else "[dim]☆[/dim]"
         )
         deadline_text = task.deadline if task.deadline else "[dim]N/A[/dim]"
 
+        if task.overdue:
+            overdue_status = "[bold red]⚠️ OVERDUE[/bold red]"
+            title_display = f"[red]{task.title}[/red]"
+        else:
+            overdue_status = "[dim]-[/dim]"
+            title_display = task.title
+
         table.add_row(
-            str(task.id), task.title, status_icon, deadline_text, importance_icon
+            str(task.id), title_display, deadline_text, overdue_status, importance_icon
         )
 
     console.print(table)

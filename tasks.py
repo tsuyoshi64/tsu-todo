@@ -19,6 +19,23 @@ class Task:
     deadline: str | None = None
     important: bool = False
     time_created: str = field(default_factory=lambda: datetime.now().isoformat())
+    overdue: bool = False
+
+    def __post_init__(self) -> None:
+        """Computes the overdue state automatically"""
+        if not self.deadline:
+            self.overdue = False
+            return
+
+        try:
+            try:
+                deadline_dt = datetime.fromisoformat(self.deadline)
+                self.overdue = datetime.now() > deadline_dt
+            except ValueError:
+                deadline_date = datetime.fromisoformat(self.deadline)
+                self.overdue = datetime.today() > deadline_date
+        except ValueError:
+            self.overdue = False
 
     @classmethod
     def from_dict(cls, data: dict) -> Self:
