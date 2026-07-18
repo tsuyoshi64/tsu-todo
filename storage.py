@@ -21,7 +21,7 @@ def load_tasks(file_path: str = "tasks.json") -> list:
         return data
 
 
-def save_tasks(tasks: list, file_path="tasks.json") -> None:
+def save_tasks(tasks: list, file_path: str = "tasks.json") -> None:
     """
     Saves task data back to json file safety (I hope so).
 
