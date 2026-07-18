@@ -105,12 +105,6 @@ This centralized design ensures you can view and update the exact same task list
 Run the test suite:
 
 ```bash
-python -m unittest discover -s tests -p "test_*.py" -v
-```
-
-Or use the included shell script:
-
-```bash
 ./test.sh
 ```
 
