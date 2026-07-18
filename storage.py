@@ -22,7 +22,16 @@ def _get_default_db_path() -> str:
     app_dir = os.path.join(base_dir, "tsutodo")
     os.makedirs(app_dir, exist_ok=True)
 
-    return os.path.join(app_dir, "tasks.json")
+    file_path = os.path.join(app_dir, "tasks.json")
+
+    if not os.path.exists(file_path):
+        try:
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump([], f)
+        except OSError:
+            pass
+
+    return file_path
 
 
 DEFAULT_DB_PATH = _get_default_db_path()
