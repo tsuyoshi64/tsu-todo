@@ -1,6 +1,3 @@
-import warnings
-from turtle import title
-
 import click
 from rich.console import Console
 from rich.table import Table
