@@ -1,3 +1,4 @@
+import os
 import unittest
 from unittest.mock import patch
 
@@ -9,8 +10,20 @@ from tasks import Task, TaskNotFoundError
 
 class TestMainCLI(unittest.TestCase):
     def setUp(self) -> None:
-        """Initialize the Click execution runner framework."""
+        """Initialize the Click execution runner framework before each test."""
         self.runner = CliRunner()
+        # Define tracking names for potential file artifacts
+        self.default_db = "tasks.json"
+        self.temp_db = "tasks.json.tmp"
+
+    def tearDown(self) -> None:
+        """Clean up any accidental or lingering database files after each test."""
+        for path in (self.default_db, self.temp_db):
+            if os.path.isfile(path):
+                try:
+                    os.remove(path)
+                except OSError:
+                    pass
 
     # LIST
     @patch("main.tasks.load_task_objects")
