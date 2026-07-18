@@ -1,5 +1,6 @@
 import unittest
 from datetime import datetime
+from unittest.mock import patch
 
 from tasks import (
     Task,
@@ -7,7 +8,9 @@ from tasks import (
     _find_task_by_id,
     create_task,
     dicts_to_tasks,
+    load_task_objects,
     mark_done,
+    save_task_objects,
     tasks_to_dicts,
 )
 
@@ -34,7 +37,9 @@ class TestTasksModule(unittest.TestCase):
         try:
             datetime.fromisoformat(task.time_created)
         except ValueError:
-            self.fail("time_created property failed to provide a valid ISO 8601 string.")
+            self.fail(
+                "time_created property failed to provide a valid ISO 8601 string."
+            )
 
     # 2. TEST SERIALIZATION / DESERIALIZATION PIPELINE
     def test_task_from_dict_happy_path(self) -> None:
@@ -162,6 +167,41 @@ class TestTasksModule(unittest.TestCase):
         task_list = [Task(id=2, title="B"), Task(id=3, title="C")]
         t = create_task(task_list, "A")
         self.assertEqual(t.id, 1)
+
+    # 5. TEST STORAGE INTEGRATION PIPELINES
+    @patch("storage.load_tasks")
+    def test_load_task_objects_pipeline(self, mock_load_tasks) -> None:
+        """Verify load_task_objects safely chains storage data to hydration engine."""
+        mock_load_tasks.return_value = [
+            {"id": 1, "title": "Mock Task A"},
+            {"id": 2, "title": "Mock Task B"},
+        ]
+
+        live_tasks = load_task_objects()
+
+        self.assertEqual(len(live_tasks), 2)
+        self.assertIsInstance(live_tasks[0], Task)
+        self.assertEqual(live_tasks[0].id, 1)
+        self.assertEqual(live_tasks[1].title, "Mock Task B")
+        mock_load_tasks.assert_called_once()
+
+    @patch("storage.save_tasks")
+    def test_save_task_objects_pipeline(self, mock_save_tasks) -> None:
+        """Verify save_task_objects safely converts domain tasks to raw storage format."""
+        live_tasks = [
+            Task(id=10, title="Live Task 10"),
+            Task(id=11, title="Live Task 11", important=True),
+        ]
+
+        save_task_objects(live_tasks)
+
+        # Verify the data shape passed down into storage.py
+        mock_save_tasks.assert_called_once()
+        passed_arguments = mock_save_tasks.call_args[0][0]
+
+        self.assertEqual(len(passed_arguments), 2)
+        self.assertEqual(passed_arguments[0]["id"], 10)
+        self.assertTrue(passed_arguments[1]["important"])
 
 
 if __name__ == "__main__":

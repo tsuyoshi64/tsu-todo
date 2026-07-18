@@ -2,6 +2,8 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from typing import Any, Self
 
+import storage
+
 
 class TaskNotFoundError(Exception):
     """raised when an id doesn't match any task in the list"""
@@ -41,6 +43,17 @@ def tasks_to_dicts(tasks: list[Task]) -> list[dict[str, Any]]:
 def dicts_to_tasks(dicts: list[dict[str, Any]]) -> list[Task]:
     """Hydrates a collection of raw storage items into rich domain Task objects."""
     return [Task.from_dict(d) for d in dicts]
+
+
+# Combination (or Pipeline) of those two helpers above
+def load_task_objects() -> list[Task]:
+    """Coordinate with storage to load and hydrate raw records into live Tasks"""
+    return dicts_to_tasks(storage.load_tasks())
+
+
+def save_task_objects(tasks: list[Task]) -> None:
+    """Dehydrates live Task objects saves them"""
+    storage.save_tasks(tasks_to_dicts(tasks))
 
 
 def _find_task_by_id(tasks: list[Task], task_id: int) -> Task | None:
