@@ -23,7 +23,7 @@ def list_tasks() -> None:
 
     # Early exit if collection is empty
     if not task_list:
-        console.print("[yellow]No tasks yet. You are completely free![/yellow]")
+        console.print("[green]No tasks yet. You are completely free![/green]")
         return
 
     # Construct presentation table layout via Rich
