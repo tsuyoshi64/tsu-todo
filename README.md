@@ -91,9 +91,7 @@ Completed tasks are removed from the active task list.
 
 ## Data Storage
 
-Tasks are saved to a local `tasks.json` file in the directory where the CLI is run. The file is ignored by Git so local task data is not committed to the repository.
-
-Writes use a temporary file and `os.replace()` to reduce the chance of corrupting `tasks.json` during save operations.
+Tasks are saved to a local `tasks.json` file in the directory where the CLI is run. 
 
 ## Development
 
