@@ -62,7 +62,7 @@ def list_tasks() -> None:
     "-d",
     type=str,
     default=None,
-    help="Optional deadline string (e.g., YYYY-MM-DD)",
+    help="Optional deadline string (format: YYYY-MM-DD)",
 )
 @click.option(
     "--important", "-i", is_flag=True, help="Mark the task as highly important."
@@ -81,7 +81,8 @@ def add(title: str, deadline: str | None, important: bool) -> None:
         console.print(
             f"[green]✓[/green] Added task [bold cyan]#{new_task.id}[/bold cyan]: {new_task.title}"
         )
-
+    except ValueError as ve:
+        console.print(f"[bold red]Validation Error:[/bold red] {ve}")
     except Exception as e:
         console.print(f"[bold red]System Error:[/bold red] Operation failed. ({e})")
 

@@ -1,5 +1,5 @@
 from dataclasses import asdict, dataclass, field
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Self
 
 import storage
@@ -89,6 +89,19 @@ def mark_done(tasks: list[Task], task_id: int) -> None:
     task.done = True
 
 
+def _is_valid_datetime_format(deadline_str: str) -> bool:
+    """Helper to check the YYYY-MM-DD format"""
+    try:
+        date.fromisoformat(deadline_str)
+        return True
+    except ValueError:
+        try:
+            datetime.fromisoformat(deadline_str)
+            return True
+        except ValueError:
+            return False
+
+
 def create_task(
     tasks: list[Task], title: str, deadline: str | None = None, important: bool = False
 ) -> Task:
@@ -98,6 +111,9 @@ def create_task(
     Generates IDs using a gap-reuse strategy (finding the lowest available
     positive integer starting from 1).
     """
+    if deadline is not None and not _is_valid_datetime_format(deadline):
+        raise ValueError("Invalid datetime format. Please use YYYY-MM-DD")
+
     existing_id: set[int] = {task.id for task in tasks}
     next_id: int = 1
     while next_id in existing_id:

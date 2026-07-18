@@ -140,10 +140,7 @@ class TestTasksModule(unittest.TestCase):
         with self.assertRaises(TaskNotFoundError):
             mark_done(tasks, 404)
 
-    # =========================================================================
-    # 5. TEST CORE FACTORY & ID GENERATION STRATEGY
-    # =========================================================================
-
+    # TEST CORE FACTORY & ID GENERATION STRATEGY
     def test_create_task_appends_to_list(self) -> None:
         """Verify factory populates tracking list and maps explicit parameters."""
         task_list: list[Task] = []
@@ -181,6 +178,26 @@ class TestTasksModule(unittest.TestCase):
         task_list = [Task(id=2, title="B"), Task(id=3, title="C")]
         t = create_task(task_list, "A")
         self.assertEqual(t.id, 1)
+
+    # TEST THE DATETIME FORMAT CHECKER
+    def test_create_task_with_valid_deadline_succeeds(self) -> None:
+        """Verify valid YYYY-MM-DD format strings pass validation guards."""
+        task_list = []
+        task = create_task(task_list, "Valid Task", deadline="2026-12-31")
+        self.assertEqual(task.deadline, "2026-12-31")
+
+    def test_create_task_with_invalid_deadline_raises_error(self) -> None:
+        """Verify invalid formatting strings trigger an immediate ValueError exception."""
+        task_list = []
+        # Bad delimiters, word entries, or wrong orders should trigger the guard
+        invalid_formats = ["31-12-2026", "2026/12/31", "tomorrow", "2026-13-40"]
+
+        for bad_date in invalid_formats:
+            with self.assertRaises(ValueError) as ctx:
+                create_task(task_list, "Bad Task", deadline=bad_date)
+            self.assertIn(
+                "Invalid datetime format. Please use YYYY-MM-DD", str(ctx.exception)
+            )
 
 
 if __name__ == "__main__":
