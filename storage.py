@@ -1,8 +1,34 @@
 import json
 import os
+import platform
 
 
-def load_tasks(file_path: str = "tasks.json") -> list:
+def _get_default_db_path() -> str:
+    """
+    Returns a centralized, cross-platform path for permanent storage.
+
+    Guarantees user data survival during application uninstalls or upgrades.
+    """
+    if platform.system() == "Windows":
+        base_dir = os.environ.get(
+            "LOCALAPPDATA", os.path.expanduser("~\\AppData\\Local")
+        )
+    elif platform.system() == "Darwin":  # macOS
+        base_dir = os.path.expanduser("~/Library/Application Support")
+    else:  # Linux and other platforms
+        base_dir = os.environ.get("XDG_DATA_HOME", os.path.expanduser("~/.local/share"))
+
+    # Isolate within a dedicated project directory structure
+    app_dir = os.path.join(base_dir, "tsutodo")
+    os.makedirs(app_dir, exist_ok=True)
+
+    return os.path.join(app_dir, "tasks.json")
+
+
+DEFAULT_DB_PATH = _get_default_db_path()
+
+
+def load_tasks(file_path: str = DEFAULT_DB_PATH) -> list:
     """
     Loads raw task data from tasks.json.
 
@@ -21,7 +47,7 @@ def load_tasks(file_path: str = "tasks.json") -> list:
         return data
 
 
-def save_tasks(tasks: list, file_path: str = "tasks.json") -> None:
+def save_tasks(tasks: list, file_path: str = DEFAULT_DB_PATH) -> None:
     """
     Saves task data back to json file safety (I hope so).
 

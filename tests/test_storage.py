@@ -20,7 +20,7 @@ class TestStorageModule(unittest.TestCase):
                 except OSError:
                     pass
 
-    # TESTS FOR load_tasks()
+    # load_tasks()
     def test_load_file_does_not_exist(self) -> None:
         """Scenario 1: Fresh install. File missing must return an empty list."""
         result = load_tasks(self.test_file)
@@ -59,7 +59,7 @@ class TestStorageModule(unittest.TestCase):
         with self.assertRaises(ValueError):
             load_tasks(self.test_file)
 
-    # TESTS FOR save_tasks()
+    # save_tasks()
     def test_save_tasks_successful_write(self) -> None:
         """Happy Path: Successfully saves data using the atomic pipeline."""
         mock_data = [{"id": 2, "title": "Read book", "done": True}]
