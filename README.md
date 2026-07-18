@@ -1,6 +1,6 @@
-# tsutodo
+# tsu-todo
 
-`tsutodo` is a small command-line to-do manager for tracking tasks from the terminal. It supports adding tasks, marking tasks as complete, deadlines, important flags, and a Rich-powered table view.
+`tsu-todo` is a small command-line to-do manager for tracking tasks from the terminal. It supports adding tasks, marking tasks as complete, deadlines, important flags, and a Rich-powered table view.
 
 > [!IMPORTANT]
 > This project is under active development. The current command set is intentionally small.
