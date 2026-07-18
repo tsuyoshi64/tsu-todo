@@ -96,7 +96,7 @@ To protect your todo items from being accidentally deleted during application up
 
 - **Linux / WSL:** `~/.local/share/tsutodo/tasks.json`
 - **macOS:** `~/Library/Application Support/tsutodo/tasks.json`
-- **Windows:** `%LOCALAPPDATA%\tsutodo\tasks.json`
+- **Windows:** `%LOCALAPPDATA%\tsutodo\tasks.json` or `C:\Users\YourName\AppData\Local\tsutodo\tasks.json`
 
 This centralized design ensures you can view and update the exact same task list regardless of which directory your terminal is currently sitting in.
 
