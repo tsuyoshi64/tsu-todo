@@ -8,11 +8,12 @@
 
 ## Features
 
-- Add tasks with optional deadlines and importance markers.
-- List open tasks in a formatted terminal table.
-- Automatically marks past deadlines as overdue.
-- Complete a task by ID and remove it from the active list.
-- Stores task data locally in a permanent, centralized `tasks.json` directory.
+- **Chronological Sorting Matrix:** Automatically forces your list to rank by closest deadlines, using importance status flags as identical date tie-breakers.
+- **Sequential ID Auto-Update:** Re-indexes your internal database task identifiers dynamically from 1 to N during every single update loop so your ID table column always stays perfectly sorted and uniform.
+- **Add Tasks Natively:** Easily assign clear titles, optional chronological deadlines, and importance markers.
+- **Dynamic Overdue Tracking:** Flags past milestones immediately inside a stylized column layout.
+- **Instant Purification Delete:** Purges entries directly out of your list array database whenever they are marked completed via the `done` workflow.
+- **Persistent Data Shield:** Safely protects record files across a cross-platform system database path.
 
 ## Requirements
 
@@ -21,28 +22,28 @@
 
 ## Dependencies
 
-Runtime dependencies are defined in `pyproject.toml`, but this project only uses two dependencies:
+Runtime dependencies are defined in `pyproject.toml`. This project values minimalism and strictly uses two external library packages:
 
-- `click` - CLI commands and argument parsing
-- `rich` - formatted terminal output
+- `click` - CLI commands, flag tracking, and input validation
+- `rich` - Formatted console tabular grids and color matrices
 
 The pinned dependency graph is stored in `uv.lock`.
 
 ## Installation
 
-Install the CLI directly from GitHub with `uv`:
+Install the CLI globally from GitHub with `uv`:
 
 ```bash
 uv tool install git+https://github.com/tsuyoshi64/tsu-todo.git
 ```
 
-Update an existing installation:
+Update an existing installation to pull down the newest changes:
 
 ```bash
 uv tool install git+https://github.com/tsuyoshi64/tsu-todo.git --upgrade
 ```
 
-Verify the CLI is available:
+Verify that the command entry point routing is configured on your path correctly:
 
 ```bash
 todo
@@ -68,7 +69,7 @@ Mark a task as important:
 todo add "Pay invoice" --important
 ```
 
-Short flags are also available:
+Short flags are also available to use simultaneously:
 
 ```bash
 todo add "Book appointment" -d 2026-12-31 -i
@@ -80,7 +81,12 @@ todo add "Book appointment" -d 2026-12-31 -i
 todo list
 ```
 
-The list view shows each task's ID, title, deadline, overdue status, and importance marker.
+The list view draws an organized matrix showing each task's ID, title, deadline, overdue status, and importance marker. 
+
+#### Sorting Rules:
+1. Tasks **with deadlines** group at the top, ordered strictly from closest to farthest date.
+2. If two tasks share the **exact same day**, the important one bubbles above the unimportant one.
+3. Tasks **without deadlines** slide to the bottom, sorted by importance.
 
 ### Complete a task
 
@@ -88,21 +94,27 @@ The list view shows each task's ID, title, deadline, overdue status, and importa
 todo done 1
 ```
 
-Completed tasks are removed from the active task list.
+Completed tasks are immediately removed from your active collection list, triggering an auto-reindex step that shifts remaining task IDs to match their visual placement order starting from `1`.
 
 ## Data Storage
 
-To protect your todo items from being accidentally deleted during application updates or uninstalls, `tsu-todo` avoids using relative execution paths. Instead, your tasks are securely anchored inside your operating system's permanent local data directory:
+To protect your todo items from being accidentally deleted during application updates or uninstalls, `tsu-todo` avoids using relative path folders. Instead, your tasks are securely anchored inside your operating system's permanent local data directory:
 
 - **Linux / WSL:** `~/.local/share/tsutodo/tasks.json`
 - **macOS:** `~/Library/Application Support/tsutodo/tasks.json`
-- **Windows:** `%LOCALAPPDATA%\tsutodo\tasks.json` or `C:\Users\YourName\AppData\Local\tsutodo\tasks.json`
+- **Windows:** `%LOCALAPPDATA%\tsutodo\tasks.json` *(e.g., `C:\Users\YourUsername\AppData\Local\tsutodo\tasks.json`)*
 
 This centralized design ensures you can view and update the exact same task list regardless of which directory your terminal is currently sitting in.
 
-## Development
+## Testing
 
-Run the test suite:
+Run the test suite across all modules simultaneously:
+
+```bash
+python -m unittest discover -s tests -p "test_*.py" -v
+```
+
+Or execute your shortcut shell runner script:
 
 ```bash
 ./test.sh
@@ -112,11 +124,11 @@ Run the test suite:
 
 ```text
 .
-|-- main.py             # Click CLI commands
-|-- tasks.py            # Task model and task operations
-|-- storage.py          # JSON load/save helpers
-|-- tests/              # Unit tests
-|-- pyproject.toml      # Project metadata and dependencies
-|-- uv.lock             # Locked dependency versions
+|-- main.py             # Click CLI commands and user messages
+|-- tasks.py            # Task model, validation guards, and sorting matrix
+|-- storage.py          # JSON load/save atomic handlers
+|-- tests/              # Exhaustive test suites folder
+|-- pyproject.toml      # Project packaging metadata and backend build anchors
+|-- uv.lock             # Locked dependency version graphs
 `-- README.md
 ```
