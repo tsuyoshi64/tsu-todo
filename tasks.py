@@ -63,14 +63,46 @@ def dicts_to_tasks(dicts: list[dict[str, Any]]) -> list[Task]:
 
 
 # Combination (or Pipeline) of those two helpers above
+def _get_task_sort_key(task: Task) -> tuple[int, str, int, int]:
+    """
+    Private sorting key shared by loading and saving operations.
+
+    Groups by deadline presence, sorts chronologically, breaks ties
+    with importance, and falls back to the original task ID.
+    """
+    # 1. Tasks with deadlines (0) go above open-ended N/A tasks (1)
+    has_no_deadline = 1 if task.deadline is None else 0
+
+    # 2. Chronological date string comparison (N/A slides out to year 9999)
+    deadline_str = task.deadline if task.deadline is not None else "9999-12-31"
+
+    # 3. Important (0) bubbles up higher than unimportant (1)
+    is_not_important = 0 if task.important else 1
+
+    return (has_no_deadline, deadline_str, is_not_important, task.id)
+
+
 def load_task_objects() -> list[Task]:
-    """Coordinate with storage to load and hydrate raw records into live Tasks"""
-    return dicts_to_tasks(storage.load_tasks())
+    """Loads, hydrates, and ranks tasks dynamically based on chronological priority."""
+    raw_dicts = storage.load_tasks()
+    unordered_tasks = dicts_to_tasks(raw_dicts)
+    return sorted(unordered_tasks, key=_get_task_sort_key)
 
 
 def save_task_objects(tasks: list[Task]) -> None:
-    """Dehydrates live Task objects saves them"""
-    storage.save_tasks(tasks_to_dicts(tasks))
+    """
+    Sorts, re-indexes IDs sequentially from 1 to N, and saves task data safely.
+    """
+    # Sort the array using the shared top-level criteria helper
+    sorted_tasks = sorted(tasks, key=_get_task_sort_key)
+
+    # Mutate the IDs sequentially based on the clean sorted order
+    for new_id, task in enumerate(sorted_tasks, start=1):
+        task.id = new_id
+
+    # Serialize and commit through the atomic storage layer
+    raw_dicts = tasks_to_dicts(sorted_tasks)
+    storage.save_tasks(raw_dicts)
 
 
 def _find_task_by_id(tasks: list[Task], task_id: int) -> Task | None:

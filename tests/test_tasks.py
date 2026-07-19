@@ -1,5 +1,6 @@
 import unittest
 from datetime import datetime, timedelta
+from unittest.mock import patch
 
 from tasks import (
     Task,
@@ -7,13 +8,15 @@ from tasks import (
     _find_task_by_id,
     create_task,
     dicts_to_tasks,
+    load_task_objects,
     mark_done,
+    save_task_objects,
     tasks_to_dicts,
 )
 
 
 class TestTasksModule(unittest.TestCase):
-    # CUSTOM EXCEPTION & DATACLASS DEFAULTS
+    #  CUSTOM EXCEPTION & DATACLASS DEFAULTS
     def test_task_not_found_error_inheritance(self) -> None:
         """Verify TaskNotFoundError behaves as a proper Exception subclass."""
         err = TaskNotFoundError("Test error message")
@@ -56,7 +59,7 @@ class TestTasksModule(unittest.TestCase):
         task = Task(id=1, title="Bad date format", deadline="not-a-date")
         self.assertFalse(task.overdue)
 
-    # TEST SERIALIZATION / DESERIALIZATION PIPELINE
+    # SERIALIZATION / DESERIALIZATION PIPELINE
     def test_task_from_dict_happy_path(self) -> None:
         """Verify raw dictionary deserialization maps all fields including overdue correctly."""
         raw = {
@@ -114,7 +117,92 @@ class TestTasksModule(unittest.TestCase):
         self.assertIsInstance(task_list[0], Task)
         self.assertEqual(task_list[0].title, "A")
 
-    # TEST PRIVATE HELPER & WORKFLOW MUTATIONS
+    # STORAGE INTEGRATION PIPELINES & RANKING MATRIX
+    @patch("storage.load_tasks")
+    def test_load_task_objects_priority_ranking_logic(self, mock_load_tasks) -> None:
+        """Verify load_task_objects sorts strictly by close-far-no deadline order."""
+        mock_load_tasks.return_value = [
+            {
+                "id": 1,
+                "title": "NoDLUnImp",
+                "deadline": None,
+                "important": False,
+                "overdue": False,
+            },
+            {
+                "id": 2,
+                "title": "FarDLImp",
+                "deadline": "2026-09-10",
+                "important": True,
+                "overdue": False,
+            },
+            {
+                "id": 3,
+                "title": "NoDLImp",
+                "deadline": None,
+                "important": True,
+                "overdue": False,
+            },
+            {
+                "id": 4,
+                "title": "CLoseDLImp",
+                "deadline": "2026-07-20",
+                "important": True,
+                "overdue": False,
+            },
+            {
+                "id": 5,
+                "title": "CLoseDLUnImp",
+                "deadline": "2026-07-20",
+                "important": False,
+                "overdue": True,
+            },  # Even if overdue=True, it sorts by date!
+        ]
+
+        ordered_tasks = load_task_objects()
+
+        self.assertEqual(len(ordered_tasks), 5)
+
+        # 1st Rank -> ID 4 (2026-07-20 + Important)
+        self.assertEqual(ordered_tasks[0].id, 4)
+
+        # 2nd Rank -> ID 5 (2026-07-20 + Unimportant)
+        self.assertEqual(ordered_tasks[1].id, 5)
+
+        # 3rd Rank -> ID 2 (2026-09-10 + Important)
+        self.assertEqual(ordered_tasks[2].id, 2)
+
+        # 4th Rank -> ID 3 (N/A + Important)
+        self.assertEqual(ordered_tasks[3].id, 3)
+
+        # 5th Rank -> ID 1 (N/A + Unimportant)
+        self.assertEqual(ordered_tasks[4].id, 1)
+
+    @patch("storage.save_tasks")
+    def test_save_task_objects_pipeline_auto_reindexes_sequentially(
+        self, mock_save_tasks
+    ) -> None:
+        """Verify save_task_objects re-indexes task IDs chronologically before writing."""
+        # Setup unordered tasks with high arbitrary IDs
+        live_tasks = [
+            Task(id=99, title="Open Unimportant", deadline=None, important=False),
+            Task(id=88, title="Close Urgent", deadline="2026-07-20", important=True),
+        ]
+
+        save_task_objects(live_tasks)
+
+        mock_save_tasks.assert_called_once()
+        passed_list = mock_save_tasks.call_args[0][0]
+
+        # Verify the close urgent task jumped to rank 1 and was assigned ID 1
+        self.assertEqual(passed_list[0]["title"], "Close Urgent")
+        self.assertEqual(passed_list[0]["id"], 1)
+
+        # Verify the open unimportant task was pushed to rank 2 and assigned ID 2
+        self.assertEqual(passed_list[1]["title"], "Open Unimportant")
+        self.assertEqual(passed_list[1]["id"], 2)
+
+    # PRIVATE HELPER & WORKFLOW MUTATIONS
     def test_find_task_by_id_scenarios(self) -> None:
         """Test matching and missing search targets through the internal index helper."""
         tasks = [Task(id=5, title="Five"), Task(id=10, title="Ten")]
@@ -140,7 +228,7 @@ class TestTasksModule(unittest.TestCase):
         with self.assertRaises(TaskNotFoundError):
             mark_done(tasks, 404)
 
-    # TEST CORE FACTORY & ID GENERATION STRATEGY
+    # CORE FACTORY & ID GENERATION STRATEGY
     def test_create_task_appends_to_list(self) -> None:
         """Verify factory populates tracking list and maps explicit parameters."""
         task_list: list[Task] = []
@@ -154,6 +242,21 @@ class TestTasksModule(unittest.TestCase):
         self.assertEqual(new_task.deadline, "2020-08-01")
         self.assertTrue(new_task.important)
         self.assertTrue(new_task.overdue)  # Past date context triggers True
+
+    def test_create_task_with_valid_deadline_succeeds(self) -> None:
+        """Verify valid YYYY-MM-DD format strings pass validation guards."""
+        task_list = []
+        task = create_task(task_list, "Valid Task", deadline="2026-12-31")
+        self.assertEqual(task.deadline, "2026-12-31")
+
+    def test_create_task_with_invalid_deadline_raises_error(self) -> None:
+        """Verify invalid formatting strings trigger an immediate ValueError exception."""
+        task_list = []
+        invalid_formats = ["31-12-2026", "2026/12/31", "tomorrow", "2026-13-40"]
+        for bad_date in invalid_formats:
+            with self.assertRaises(ValueError) as ctx:
+                create_task(task_list, "Bad Task", deadline=bad_date)
+                self.assertIn("Invalid deadline format", str(ctx.exception))
 
     def test_create_task_id_generation_empty(self) -> None:
         """Verify initial run maps default task ID to 1 when tracking index is clean."""
@@ -178,26 +281,6 @@ class TestTasksModule(unittest.TestCase):
         task_list = [Task(id=2, title="B"), Task(id=3, title="C")]
         t = create_task(task_list, "A")
         self.assertEqual(t.id, 1)
-
-    # TEST THE DATETIME FORMAT CHECKER
-    def test_create_task_with_valid_deadline_succeeds(self) -> None:
-        """Verify valid YYYY-MM-DD format strings pass validation guards."""
-        task_list = []
-        task = create_task(task_list, "Valid Task", deadline="2026-12-31")
-        self.assertEqual(task.deadline, "2026-12-31")
-
-    def test_create_task_with_invalid_deadline_raises_error(self) -> None:
-        """Verify invalid formatting strings trigger an immediate ValueError exception."""
-        task_list = []
-        # Bad delimiters, word entries, or wrong orders should trigger the guard
-        invalid_formats = ["31-12-2026", "2026/12/31", "tomorrow", "2026-13-40"]
-
-        for bad_date in invalid_formats:
-            with self.assertRaises(ValueError) as ctx:
-                create_task(task_list, "Bad Task", deadline=bad_date)
-            self.assertIn(
-                "Invalid datetime format. Please use YYYY-MM-DD", str(ctx.exception)
-            )
 
 
 if __name__ == "__main__":
