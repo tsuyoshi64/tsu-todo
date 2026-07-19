@@ -79,7 +79,7 @@ def add(title: str, deadline: str | None, important: bool) -> None:
 
         tasks.save_task_objects(task_list)
         console.print(
-            f"[green]✓[/green] Added task [bold cyan]#{new_task.id}[/bold cyan]: {new_task.title}"
+            f"[green]✓[/green] Added task [bold cyan]#{new_task.title}[/bold cyan]"
         )
     except ValueError as ve:
         console.print(f"[bold red]Validation Error:[/bold red] {ve}")

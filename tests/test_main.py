@@ -86,8 +86,7 @@ class TestMainCLI(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 0)
         self.assertIn("Added task", result.output)
-        self.assertIn("1", result.output)
-        self.assertIn("Mow Lawn", result.output)
+        self.assertIn("#Mow Lawn", result.output)
 
         mock_load.assert_called_once()
         mock_create.assert_called_once_with(
