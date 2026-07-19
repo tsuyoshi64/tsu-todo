@@ -3,9 +3,6 @@
 
 `tsu-todo` is a small command-line to-do manager for tracking tasks from the terminal. It supports adding tasks, marking tasks as complete, deadlines, important flags, and a Rich-powered table view.
 
-> [!IMPORTANT]
-> This project is under active development. The current command set is intentionally small.
-
 ## Features
 
 - **Chronological Sorting Matrix:** Automatically forces your list to rank by closest deadlines, using importance status flags as identical date tie-breakers.
